@@ -19,27 +19,57 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
-      const participants = details.participants || [];
-      const participantsSection = participants.length
-        ? `<div class="participants-section">
-             <p><strong>Participants:</strong></p>
-             <ul class="participants-list">
-               ${participants.map((participant) => `<li>${participant}</li>`).join("")}
-             </ul>
-           </div>`
-        : `<p class="no-participants"><strong>Participants:</strong> No participants yet.</p>`;
+        const participants = details.participants || [];
+        const participantsSection = participants.length
+          ? `<div class="participants-section">
+               <p><strong>Participants:</strong></p>
+               <ul class="participants-list no-bullets">
+                 ${participants.map((participant) => `
+                   <li class="participant-item">
+                     <span class="participant-email">${participant}</span>
+                     <button class="delete-participant" data-activity="${encodeURIComponent(name)}" data-email="${encodeURIComponent(participant)}" title="Remove participant">✖</button>
+                   </li>
+                 `).join("")}
+               </ul>
+             </div>`
+          : `<p class="no-participants"><strong>Participants:</strong> No participants yet.</p>`;
 
-      activityCard.innerHTML = `
-          <h4>${name}</h4>
-          <p>${details.description}</p>
-          <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
-          ${participantsSection}
+        activityCard.innerHTML = `
+            <h4>${name}</h4>
+            <p>${details.description}</p>
+            <p><strong>Schedule:</strong> ${details.schedule}</p>
+            <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+            ${participantsSection}
+        `;
+
+        activitiesList.appendChild(activityCard);
+
         // Add option to select dropdown
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+
+      // Add event listeners for delete buttons
+      document.querySelectorAll(".delete-participant").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          const activity = decodeURIComponent(btn.getAttribute("data-activity"));
+          const email = decodeURIComponent(btn.getAttribute("data-email"));
+          try {
+            const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+              method: "POST",
+            });
+            if (response.ok) {
+              fetchActivities();
+            } else {
+              const result = await response.json();
+              alert(result.detail || "Failed to remove participant.");
+            }
+          } catch (error) {
+            alert("Failed to remove participant. Please try again.");
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
